@@ -32,12 +32,38 @@
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-    :root { color-scheme: dark; }
+    :root {
+      color-scheme: dark;
+      --bg:           #0e0c08;
+      --darken-0:     rgba(20, 16, 12, 0.10);
+      --darken-60:    rgba(20, 16, 12, 0.25);
+      --darken-100:   rgba(20, 16, 12, 0.65);
+      --grid-blend:   screen;
+      --grid-opacity: 0.18;
+      --frame-color:  rgba(240, 233, 216, 0.18);
+      --text:         #f0e9d8;
+      --pulse-warm:   255,183,102;
+      --pulse-cool:   240,233,216;
+    }
+
+    :root.light {
+      color-scheme: light;
+      --bg:           #f5f0e8;
+      --darken-0:     rgba(245, 240, 232, 0.00);
+      --darken-60:    rgba(245, 240, 232, 0.30);
+      --darken-100:   rgba(245, 240, 232, 0.72);
+      --grid-blend:   multiply;
+      --grid-opacity: 0.12;
+      --frame-color:  rgba(20, 16, 12, 0.18);
+      --text:         #14100c;
+      --pulse-warm:   180,100,20;
+      --pulse-cool:   80,60,40;
+    }
 
     html, body {
       width: 100%; height: 100%;
       overflow: hidden;
-      background: #0e0c08;
+      background: var(--bg);
     }
 
     /* Full-viewport scene — always fills the screen, no letterboxing */
@@ -45,7 +71,7 @@
       position: fixed;
       inset: 0;
       overflow: hidden;
-      background: #0e0c08;
+      background: var(--bg);
     }
 
     /* Layer 1 — painting backdrop: covers the entire scene */
@@ -65,9 +91,9 @@
       pointer-events: none;
       background: linear-gradient(
         180deg,
-        rgba(20, 16, 12, 0.10)  0%,
-        rgba(20, 16, 12, 0.25) 60%,
-        rgba(20, 16, 12, 0.65) 100%
+        var(--darken-0)   0%,
+        var(--darken-60)  60%,
+        var(--darken-100) 100%
       );
     }
 
@@ -76,8 +102,8 @@
       position: absolute;
       inset: 0;
       pointer-events: none;
-      opacity: 0.18;
-      mix-blend-mode: screen;
+      opacity: var(--grid-opacity);
+      mix-blend-mode: var(--grid-blend);
     }
 
     /* Layer 4 — animated pulses canvas */
@@ -86,7 +112,7 @@
       inset: 0;
       width: 100%; height: 100%;
       pointer-events: none;
-      mix-blend-mode: screen;
+      mix-blend-mode: var(--grid-blend);
     }
 
     /* Layer 5 — hairline inner frame */
@@ -94,7 +120,7 @@
       position: absolute;
       inset: clamp(16px, 2vw, 28px);
       pointer-events: none;
-      border: 1px solid rgba(240, 233, 216, 0.18);
+      border: 1px solid var(--frame-color);
     }
 
     /* Layer 6 — type lockup */
@@ -112,7 +138,7 @@
       line-height: 1.0;
       font-weight: 400;
       letter-spacing: -0.015em;
-      color: #f0e9d8;
+      color: var(--text);
       white-space: nowrap;
       display: flex;
       flex-direction: column;
@@ -125,6 +151,11 @@
       height: 0.82em;
       width: auto;
       display: block;
+    }
+
+    /* In light mode, darken the amber logo enough for contrast on the light bg */
+    :root.light .wordmark-logo {
+      filter: brightness(0.38);
     }
 
     /* Mobile: stack wordmark + link vertically, Join Us left-aligned */
@@ -144,15 +175,39 @@
       font-size: 11px;
       letter-spacing: 0.32em;
       text-transform: uppercase;
-      color: #f0e9d8;
+      color: var(--text);
       text-decoration: none;
       transition: opacity 200ms ease;
     }
 
     .join-us:hover { opacity: 0.7; }
     .join-us:focus-visible {
-      outline: 1px solid rgba(240, 233, 216, 0.5);
+      outline: 1px solid var(--frame-color);
       outline-offset: 5px;
+    }
+
+    /* Theme toggle — top right, inside the inner frame */
+    .theme-toggle {
+      position: fixed;
+      top: clamp(20px, 2vw, 36px);
+      right: clamp(20px, 2vw, 36px);
+      font-family: 'Geist Mono', ui-monospace, monospace;
+      font-size: 10px;
+      letter-spacing: 0.28em;
+      text-transform: uppercase;
+      color: var(--text);
+      background: transparent;
+      border: 1px solid var(--frame-color);
+      padding: 5px 10px;
+      cursor: pointer;
+      transition: opacity 200ms ease;
+      z-index: 10;
+    }
+
+    .theme-toggle:hover { opacity: 0.6; }
+    .theme-toggle:focus-visible {
+      outline: 1px solid var(--frame-color);
+      outline-offset: 4px;
     }
   </style>
 </head>
@@ -192,6 +247,9 @@
     <!-- Layer 5: hairline inner frame -->
     <div class="inner-frame" aria-hidden="true"></div>
 
+    <!-- Theme toggle (dev helper) -->
+    <button class="theme-toggle" id="theme-toggle" aria-label="Toggle light/dark mode">Light</button>
+
     <!-- Layer 6: type lockup + Join Us link -->
     <div class="lockup">
       <div class="wordmark">
@@ -203,6 +261,15 @@
   </div>
 
   <script>
+    // Light/dark toggle
+    var toggleBtn = document.getElementById('theme-toggle');
+    var root = document.documentElement;
+    toggleBtn.addEventListener('click', function() {
+      var isLight = root.classList.toggle('light');
+      toggleBtn.textContent = isLight ? 'Dark' : 'Light';
+      document.querySelector('meta[name="color-scheme"]').content = isLight ? 'light' : 'dark';
+    });
+
     // Canvas pulse animation.
     // Entirely skipped (not just hidden) when the user prefers reduced motion.
     if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
@@ -265,6 +332,10 @@
         last = now;
         ctx.clearRect(0, 0, W, H);
 
+        var _style   = getComputedStyle(root);
+        var warmHue  = _style.getPropertyValue('--pulse-warm').trim();
+        var coolHue  = _style.getPropertyValue('--pulse-cool').trim();
+
         pulses = pulses.filter(function(p) {
           p.x += p.dx * p.speed * dt;
           p.y += p.dy * p.speed * dt;
@@ -276,7 +347,7 @@
           var tailX = p.x - p.dx * TAIL;
           var tailY = p.y - p.dy * TAIL;
           var grad  = ctx.createLinearGradient(tailX, tailY, p.x, p.y);
-          var hue   = p.warm ? '255,183,102' : '240,233,216';
+          var hue   = p.warm ? warmHue : coolHue;
           grad.addColorStop(0,   'rgba(' + hue + ',0)');
           grad.addColorStop(0.7, 'rgba(' + hue + ',0.18)');
           grad.addColorStop(1,   'rgba(' + hue + ',0.85)');
