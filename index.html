@@ -17,23 +17,15 @@
       background: #0e0c08;
     }
 
-    /* Full-screen letterbox container */
-    .stage {
+    /* Full-viewport scene — always fills the screen, no letterboxing */
+    .scene {
       position: fixed;
       inset: 0;
-    }
-
-    /* The design canvas — always 1440×900; JS positions and scales it */
-    .frame {
-      position: absolute;
-      width: 1440px;
-      height: 900px;
       overflow: hidden;
       background: #0e0c08;
-      transform-origin: top left;
     }
 
-    /* Layer 1 — painting backdrop */
+    /* Layer 1 — painting backdrop: covers the entire scene */
     .painting {
       position: absolute;
       top: 50%; left: 50%;
@@ -56,14 +48,13 @@
       );
     }
 
-    /* Layer 3 — static grid */
+    /* Layer 3 — static grid (80px minor + 320px major, screen-blended texture) */
     .grid {
       position: absolute;
       inset: 0;
       pointer-events: none;
       opacity: 0.18;
       mix-blend-mode: screen;
-      overflow: visible;
     }
 
     /* Layer 4 — animated pulses canvas */
@@ -78,7 +69,7 @@
     /* Layer 5 — hairline inner frame */
     .inner-frame {
       position: absolute;
-      inset: 28px;
+      inset: clamp(16px, 2vw, 28px);
       pointer-events: none;
       border: 1px solid rgba(240, 233, 216, 0.18);
     }
@@ -94,7 +85,7 @@
 
     .wordmark {
       font-family: 'Space Grotesk', system-ui, sans-serif;
-      font-size: 36px;
+      font-size: clamp(22px, 2.6vw, 36px);
       line-height: 1.0;
       font-weight: 400;
       letter-spacing: -0.015em;
@@ -112,8 +103,7 @@
       white-space: pre;
     }
 
-    /* TODO: replace href with client-provided LinkedIn URL */
-    .linkedin {
+    .join-us {
       font-family: 'Geist Mono', ui-monospace, monospace;
       font-size: 11px;
       letter-spacing: 0.32em;
@@ -123,99 +113,68 @@
       transition: opacity 200ms ease;
     }
 
-    .linkedin:hover { opacity: 0.7; }
+    .join-us:hover { opacity: 0.7; }
   </style>
 </head>
 <body>
-  <div class="stage">
-    <div class="frame" id="frame">
+  <div class="scene">
 
-      <!-- Layer 1: painting backdrop -->
-      <img
-        class="painting"
-        src="assets/painting-landscape.jpg"
-        alt=""
-        aria-hidden="true"
-        loading="eager"
-        fetchpriority="high"
-      >
+    <!-- Layer 1: painting backdrop -->
+    <img
+      class="painting"
+      src="assets/painting-landscape.jpg"
+      alt=""
+      aria-hidden="true"
+      loading="eager"
+      fetchpriority="high"
+    >
 
-      <!-- Layer 2: darken gradient -->
-      <div class="darken" aria-hidden="true"></div>
+    <!-- Layer 2: darken gradient -->
+    <div class="darken" aria-hidden="true"></div>
 
-      <!-- Layer 3: static grid (minor 80px + major 320px, screen-blended) -->
-      <svg class="grid" aria-hidden="true" width="1440" height="900">
-        <defs>
-          <pattern id="minor" width="80" height="80" patternUnits="userSpaceOnUse">
-            <path d="M 80 0 L 0 0 0 80" fill="none" stroke="#f0e9d8" stroke-width="0.5"/>
-          </pattern>
-          <pattern id="major" width="320" height="320" patternUnits="userSpaceOnUse">
-            <path d="M 320 0 L 0 0 0 320" fill="none" stroke="#f0e9d8" stroke-width="0.8"/>
-          </pattern>
-        </defs>
-        <rect width="1440" height="900" fill="url(#minor)"/>
-        <rect width="1440" height="900" fill="url(#major)" opacity="0.6"/>
-      </svg>
+    <!-- Layer 3: static grid (minor 80px + major 320px, screen-blended) -->
+    <svg class="grid" aria-hidden="true" width="100%" height="100%">
+      <defs>
+        <pattern id="minor" width="80" height="80" patternUnits="userSpaceOnUse">
+          <path d="M 80 0 L 0 0 0 80" fill="none" stroke="#f0e9d8" stroke-width="0.5"/>
+        </pattern>
+        <pattern id="major" width="320" height="320" patternUnits="userSpaceOnUse">
+          <path d="M 320 0 L 0 0 0 320" fill="none" stroke="#f0e9d8" stroke-width="0.8"/>
+        </pattern>
+      </defs>
+      <rect width="100%" height="100%" fill="url(#minor)"/>
+      <rect width="100%" height="100%" fill="url(#major)" opacity="0.6"/>
+    </svg>
 
-      <!-- Layer 4: animated pulses (skipped for prefers-reduced-motion) -->
-      <canvas class="pulses" id="pulses" aria-hidden="true"></canvas>
+    <!-- Layer 4: animated pulses (skipped for prefers-reduced-motion) -->
+    <canvas class="pulses" id="pulses" aria-hidden="true"></canvas>
 
-      <!-- Layer 5: hairline inner frame -->
-      <div class="inner-frame" aria-hidden="true"></div>
+    <!-- Layer 5: hairline inner frame -->
+    <div class="inner-frame" aria-hidden="true"></div>
 
-      <!-- Layer 6: type lockup + LinkedIn link -->
-      <div class="lockup">
-        <div class="wordmark">
-          <span class="wordmark-saga">Saga</span><span class="wordmark-sep">  /  </span>Knowledge is everything.
-        </div>
-        <!-- TODO: swap href with client-provided LinkedIn URL before launch -->
-        <a
-          class="linkedin"
-          href="#"
-          target="_blank"
-          rel="noopener noreferrer"
-        >LinkedIn &#x2192;</a>
+    <!-- Layer 6: type lockup + Join Us link -->
+    <div class="lockup">
+      <div class="wordmark">
+        <span class="wordmark-saga">Saga</span><span class="wordmark-sep">  /  </span>Knowledge is everything.
       </div>
-
+      <a class="join-us" href="mailto:team@withsaga.com">Join Us &#x2192;</a>
     </div>
+
   </div>
 
   <script>
-    // Scale-to-fit: the frame is always 1440×900 in design units.
-    // JS computes the uniform scale, then positions the frame so the
-    // scaled result is centered in the viewport (letterbox in #0e0c08).
-    // Note: CSS grid place-items:center does not center items larger than
-    // the container, so we position manually with top/left + transform-origin:top left.
-    function fit() {
-      var w = window.innerWidth;
-      var h = window.innerHeight;
-      if (!w || !h) return;
-      var s = Math.min(w / 1440, h / 900);
-      var frame = document.getElementById('frame');
-      frame.style.left = ((w - 1440 * s) / 2) + 'px';
-      frame.style.top  = ((h - 900  * s) / 2) + 'px';
-      frame.style.transform = 'scale(' + s + ')';
-    }
-    window.addEventListener('resize', fit);
-    fit();
-
     // Canvas pulse animation.
     // Entirely skipped (not just hidden) when the user prefers reduced motion.
     if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      var canvas  = document.getElementById('pulses');
-      var ctx     = canvas.getContext('2d');
-      var W       = 1440, H = 900;
-      var dpr     = Math.min(window.devicePixelRatio || 1, 2);
+      var canvas = document.getElementById('pulses');
+      var ctx    = canvas.getContext('2d');
+      var dpr    = Math.min(window.devicePixelRatio || 1, 2);
 
-      canvas.width  = W * dpr;
-      canvas.height = H * dpr;
-      ctx.scale(dpr, dpr);
-
-      var STEP      = 80;    // minor grid spacing — pulses ride these lines
-      var MAX       = 7;     // simultaneous pulse cap
-      var SPEED_MIN = 60;    // px/s
+      var STEP      = 80;   // minor grid spacing — pulses ride these lines
+      var MAX       = 7;    // simultaneous pulse cap
+      var SPEED_MIN = 60;   // px/s
       var SPEED_MAX = 140;
-      var TAIL      = 110;   // px
+      var TAIL      = 110;  // px
 
       var DIRS = [
         { dx:  1, dy: 0 },  // L→R
@@ -226,6 +185,7 @@
 
       // One pulse per grid line at a time. Freed when the pulse fully exits.
       var occupied = new Set();
+      var W, H;
 
       function makePulse() {
         for (var attempt = 0; attempt < 10; attempt++) {
@@ -249,10 +209,10 @@
             dx: d.dx, dy: d.dy,
             speed: SPEED_MIN + Math.random() * (SPEED_MAX - SPEED_MIN),
             key: key,
-            warm: Math.random() < 0.6, // 60% warm amber, 40% bone
+            warm: Math.random() < 0.6,
           };
         }
-        return null; // all attempted lines are occupied; try next frame
+        return null;
       }
 
       var pulses  = [];
@@ -260,14 +220,8 @@
       var running = false;
       var last    = performance.now();
 
-      // Seed with a few pulses so the canvas isn't empty on first frame
-      for (var i = 0; i < 3; i++) {
-        var seed = makePulse();
-        if (seed) pulses.push(seed);
-      }
-
       function tick(now) {
-        var dt = Math.min(0.05, (now - last) / 1000); // cap prevents spiral after tab wake
+        var dt = Math.min(0.05, (now - last) / 1000);
         last = now;
         ctx.clearRect(0, 0, W, H);
 
@@ -275,12 +229,10 @@
           p.x += p.dx * p.speed * dt;
           p.y += p.dy * p.speed * dt;
 
-          // Pulse lives until its head is TAIL px past the canvas edge
           var alive = p.x > -TAIL && p.x < W + TAIL &&
                       p.y > -TAIL && p.y < H + TAIL;
           if (!alive) { occupied.delete(p.key); return false; }
 
-          // Draw: tapered gradient tail → bright head
           var tailX = p.x - p.dx * TAIL;
           var tailY = p.y - p.dy * TAIL;
           var grad  = ctx.createLinearGradient(tailX, tailY, p.x, p.y);
@@ -296,14 +248,12 @@
           ctx.lineTo(p.x, p.y);
           ctx.stroke();
 
-          // 1px head square — no glow
           ctx.fillStyle = 'rgba(' + hue + ',0.7)';
           ctx.fillRect(p.x - 0.5, p.y - 0.5, 1, 1);
 
           return true;
         });
 
-        // Top up pool; each frame has an independent 4% chance per missing slot
         while (pulses.length < MAX && Math.random() < 0.04) {
           var p = makePulse();
           if (!p) break;
@@ -314,7 +264,7 @@
       }
 
       function start() {
-        if (running) return; // guard against double-start on rapid visibility toggle
+        if (running) return;
         running = true;
         last = performance.now();
         raf  = requestAnimationFrame(tick);
@@ -326,12 +276,35 @@
         if (raf !== null) { cancelAnimationFrame(raf); raf = null; }
       }
 
-      // Pause animation when the tab is hidden to avoid background CPU use
+      function initCanvas() {
+        stop();
+        W = window.innerWidth;
+        H = window.innerHeight;
+        canvas.width  = W * dpr;
+        canvas.height = H * dpr;
+        // Setting .width resets canvas state; re-apply the DPR scale
+        ctx.scale(dpr, dpr);
+        occupied.clear();
+        pulses = [];
+        for (var i = 0; i < 3; i++) {
+          var seed = makePulse();
+          if (seed) pulses.push(seed);
+        }
+        start();
+      }
+
+      // Debounce resize to avoid reinitialising on every pixel change
+      var resizeTimer;
+      window.addEventListener('resize', function() {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(initCanvas, 150);
+      });
+
       document.addEventListener('visibilitychange', function() {
         document.visibilityState === 'hidden' ? stop() : start();
       });
 
-      start();
+      initCanvas();
     }
   </script>
 </body>
