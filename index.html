@@ -1,0 +1,324 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Saga — Knowledge is everything.</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500&family=Geist+Mono:wght@400&display=swap" rel="stylesheet">
+  <link rel="preload" as="image" href="assets/painting-landscape.jpg">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      width: 100%; height: 100%;
+      overflow: hidden;
+      background: #0e0c08;
+    }
+
+    /* Full-viewport scene — always fills the screen, no letterboxing */
+    .scene {
+      position: fixed;
+      inset: 0;
+      overflow: hidden;
+      background: #0e0c08;
+    }
+
+    /* Layer 1 — painting backdrop: covers the entire scene */
+    .painting {
+      position: absolute;
+      top: 50%; left: 50%;
+      width: 108%; height: 108%;
+      transform: translate(-50%, -50%);
+      object-fit: cover;
+      object-position: center;
+    }
+
+    /* Layer 2 — vertical darken gradient */
+    .darken {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background: linear-gradient(
+        180deg,
+        rgba(20, 16, 12, 0.10)  0%,
+        rgba(20, 16, 12, 0.25) 60%,
+        rgba(20, 16, 12, 0.65) 100%
+      );
+    }
+
+    /* Layer 3 — static grid (80px minor + 320px major, screen-blended texture) */
+    .grid {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      opacity: 0.18;
+      mix-blend-mode: screen;
+    }
+
+    /* Layer 4 — animated pulses canvas */
+    .pulses {
+      position: absolute;
+      inset: 0;
+      width: 100%; height: 100%;
+      pointer-events: none;
+      mix-blend-mode: screen;
+    }
+
+    /* Layer 5 — hairline inner frame */
+    .inner-frame {
+      position: absolute;
+      inset: clamp(16px, 2vw, 28px);
+      pointer-events: none;
+      border: 1px solid rgba(240, 233, 216, 0.18);
+    }
+
+    /* Layer 6 — type lockup */
+    .lockup {
+      position: absolute;
+      left: 40px; right: 40px; bottom: 56px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+    }
+
+    .wordmark {
+      font-family: 'Space Grotesk', system-ui, sans-serif;
+      font-size: clamp(22px, 2.6vw, 36px);
+      line-height: 1.0;
+      font-weight: 400;
+      letter-spacing: -0.015em;
+      color: #f0e9d8;
+      white-space: nowrap;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.45em;
+    }
+
+    /* SVG logo stacked above the tagline; ~20% larger than cap-height baseline */
+    .wordmark-logo {
+      height: 0.82em;
+      width: auto;
+      display: block;
+    }
+
+    /* Mobile: stack wordmark + link vertically, Join Us left-aligned */
+    @media (max-width: 640px) {
+      .lockup {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 18px;
+      }
+      .wordmark {
+        white-space: normal;
+      }
+    }
+
+    .join-us {
+      font-family: 'Geist Mono', ui-monospace, monospace;
+      font-size: 11px;
+      letter-spacing: 0.32em;
+      text-transform: uppercase;
+      color: #f0e9d8;
+      text-decoration: none;
+      transition: opacity 200ms ease;
+    }
+
+    .join-us:hover { opacity: 0.7; }
+  </style>
+</head>
+<body>
+  <div class="scene">
+
+    <!-- Layer 1: painting backdrop -->
+    <img
+      class="painting"
+      src="assets/painting-landscape.jpg"
+      alt=""
+      aria-hidden="true"
+      loading="eager"
+      fetchpriority="high"
+    >
+
+    <!-- Layer 2: darken gradient -->
+    <div class="darken" aria-hidden="true"></div>
+
+    <!-- Layer 3: static grid (minor 80px + major 320px, screen-blended) -->
+    <svg class="grid" aria-hidden="true" width="100%" height="100%">
+      <defs>
+        <pattern id="minor" width="80" height="80" patternUnits="userSpaceOnUse">
+          <path d="M 80 0 L 0 0 0 80" fill="none" stroke="#f0e9d8" stroke-width="0.5"/>
+        </pattern>
+        <pattern id="major" width="320" height="320" patternUnits="userSpaceOnUse">
+          <path d="M 320 0 L 0 0 0 320" fill="none" stroke="#f0e9d8" stroke-width="0.8"/>
+        </pattern>
+      </defs>
+      <rect width="100%" height="100%" fill="url(#minor)"/>
+      <rect width="100%" height="100%" fill="url(#major)" opacity="0.6"/>
+    </svg>
+
+    <!-- Layer 4: animated pulses (skipped for prefers-reduced-motion) -->
+    <canvas class="pulses" id="pulses" aria-hidden="true"></canvas>
+
+    <!-- Layer 5: hairline inner frame -->
+    <div class="inner-frame" aria-hidden="true"></div>
+
+    <!-- Layer 6: type lockup + Join Us link -->
+    <div class="lockup">
+      <div class="wordmark">
+        <img src="assets/saga-logo.svg" alt="Saga" class="wordmark-logo">Knowledge is everything.
+      </div>
+      <a class="join-us" href="mailto:team@withsaga.com">Join Us &#x2192;</a>
+    </div>
+
+  </div>
+
+  <script>
+    // Canvas pulse animation.
+    // Entirely skipped (not just hidden) when the user prefers reduced motion.
+    if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      var canvas = document.getElementById('pulses');
+      var ctx    = canvas.getContext('2d');
+      var dpr    = Math.min(window.devicePixelRatio || 1, 2);
+
+      var STEP      = 80;   // minor grid spacing — pulses ride these lines
+      var MAX       = 7;    // simultaneous pulse cap
+      var SPEED_MIN = 60;   // px/s
+      var SPEED_MAX = 140;
+      var TAIL      = 110;  // px
+
+      var DIRS = [
+        { dx:  1, dy: 0 },  // L→R
+        { dx: -1, dy: 0 },  // R→L
+        { dx:  0, dy: 1 },  // T→B
+        { dx:  0, dy: -1 }, // B→T
+      ];
+
+      // One pulse per grid line at a time. Freed when the pulse fully exits.
+      var occupied = new Set();
+      var W, H;
+
+      function makePulse() {
+        for (var attempt = 0; attempt < 10; attempt++) {
+          var d = DIRS[Math.floor(Math.random() * DIRS.length)];
+          var horizontal = d.dy === 0;
+          var lineCoord  = horizontal
+            ? Math.floor(Math.random() * Math.floor(H / STEP)) * STEP
+            : Math.floor(Math.random() * Math.floor(W / STEP)) * STEP;
+          var key = horizontal ? 'h:' + lineCoord : 'v:' + lineCoord;
+          if (occupied.has(key)) continue;
+
+          var x, y;
+          if      (d.dx ===  1) { x = -TAIL;    y = lineCoord; }
+          else if (d.dx === -1) { x = W + TAIL; y = lineCoord; }
+          else if (d.dy ===  1) { x = lineCoord; y = -TAIL; }
+          else                  { x = lineCoord; y = H + TAIL; }
+
+          occupied.add(key);
+          return {
+            x: x, y: y,
+            dx: d.dx, dy: d.dy,
+            speed: SPEED_MIN + Math.random() * (SPEED_MAX - SPEED_MIN),
+            key: key,
+            warm: Math.random() < 0.6,
+          };
+        }
+        return null;
+      }
+
+      var pulses  = [];
+      var raf     = null;
+      var running = false;
+      var last    = performance.now();
+
+      function tick(now) {
+        var dt = Math.min(0.05, (now - last) / 1000);
+        last = now;
+        ctx.clearRect(0, 0, W, H);
+
+        pulses = pulses.filter(function(p) {
+          p.x += p.dx * p.speed * dt;
+          p.y += p.dy * p.speed * dt;
+
+          var alive = p.x > -TAIL && p.x < W + TAIL &&
+                      p.y > -TAIL && p.y < H + TAIL;
+          if (!alive) { occupied.delete(p.key); return false; }
+
+          var tailX = p.x - p.dx * TAIL;
+          var tailY = p.y - p.dy * TAIL;
+          var grad  = ctx.createLinearGradient(tailX, tailY, p.x, p.y);
+          var hue   = p.warm ? '255,183,102' : '240,233,216';
+          grad.addColorStop(0,   'rgba(' + hue + ',0)');
+          grad.addColorStop(0.7, 'rgba(' + hue + ',0.18)');
+          grad.addColorStop(1,   'rgba(' + hue + ',0.85)');
+
+          ctx.strokeStyle = grad;
+          ctx.lineWidth   = 1.0;
+          ctx.beginPath();
+          ctx.moveTo(tailX, tailY);
+          ctx.lineTo(p.x, p.y);
+          ctx.stroke();
+
+          ctx.fillStyle = 'rgba(' + hue + ',0.7)';
+          ctx.fillRect(p.x - 0.5, p.y - 0.5, 1, 1);
+
+          return true;
+        });
+
+        while (pulses.length < MAX && Math.random() < 0.04) {
+          var p = makePulse();
+          if (!p) break;
+          pulses.push(p);
+        }
+
+        raf = requestAnimationFrame(tick);
+      }
+
+      function start() {
+        if (running) return;
+        running = true;
+        last = performance.now();
+        raf  = requestAnimationFrame(tick);
+      }
+
+      function stop() {
+        if (!running) return;
+        running = false;
+        if (raf !== null) { cancelAnimationFrame(raf); raf = null; }
+      }
+
+      function initCanvas() {
+        stop();
+        W = window.innerWidth;
+        H = window.innerHeight;
+        canvas.width  = W * dpr;
+        canvas.height = H * dpr;
+        // Setting .width resets canvas state; re-apply the DPR scale
+        ctx.scale(dpr, dpr);
+        occupied.clear();
+        pulses = [];
+        for (var i = 0; i < 3; i++) {
+          var seed = makePulse();
+          if (seed) pulses.push(seed);
+        }
+        start();
+      }
+
+      // Debounce resize to avoid reinitialising on every pixel change
+      var resizeTimer;
+      window.addEventListener('resize', function() {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(initCanvas, 150);
+      });
+
+      document.addEventListener('visibilitychange', function() {
+        document.visibilityState === 'hidden' ? stop() : start();
+      });
+
+      initCanvas();
+    }
+  </script>
+</body>
+</html>
