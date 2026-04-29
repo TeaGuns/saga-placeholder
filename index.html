@@ -93,14 +93,29 @@
       white-space: nowrap;
     }
 
-    .wordmark-saga {
-      color: #ffb766;
-      font-weight: 500;
+    /* SVG logo sized to match cap height of the wordmark text */
+    .wordmark-logo {
+      height: 0.68em;
+      width: auto;
+      vertical-align: middle;
+      display: inline;
     }
 
     .wordmark-sep {
       color: rgba(240, 233, 216, 0.5);
       white-space: pre;
+    }
+
+    /* Mobile: stack wordmark + link vertically, Join Us left-aligned */
+    @media (max-width: 640px) {
+      .lockup {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 18px;
+      }
+      .wordmark {
+        white-space: normal;
+      }
     }
 
     .join-us {
@@ -155,7 +170,7 @@
     <!-- Layer 6: type lockup + Join Us link -->
     <div class="lockup">
       <div class="wordmark">
-        <span class="wordmark-saga">Saga</span><span class="wordmark-sep">  /  </span>Knowledge is everything.
+        <img src="assets/saga-logo.svg" alt="Saga" class="wordmark-logo"><span class="wordmark-sep">  /  </span>Knowledge is everything.
       </div>
       <a class="join-us" href="mailto:team@withsaga.com">Join Us &#x2192;</a>
     </div>
