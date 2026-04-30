@@ -209,6 +209,21 @@
       outline: 1px solid var(--frame-color);
       outline-offset: 4px;
     }
+
+    .painting-credit {
+      position: fixed;
+      top: clamp(20px, 2vw, 36px);
+      left: clamp(20px, 2vw, 36px);
+      font-family: 'Geist Mono', ui-monospace, monospace;
+      font-size: 10px;
+      letter-spacing: 0.04em;
+      color: var(--text);
+      opacity: 0.65;
+      text-shadow: 0 1px 6px rgba(0,0,0,0.7);
+      pointer-events: none;
+      z-index: 10;
+      white-space: nowrap;
+    }
   </style>
 </head>
 <body>
@@ -246,6 +261,9 @@
 
     <!-- Layer 5: hairline inner frame -->
     <div class="inner-frame" aria-hidden="true"></div>
+
+    <!-- Painting credit — top left -->
+    <p class="painting-credit" aria-label="Painting credit">River Landscape with Herdsmen · Claude Lorrain · 1632</p>
 
     <!-- Theme toggle (dev helper) -->
     <button class="theme-toggle" id="theme-toggle" aria-label="Toggle light/dark mode">Light</button>
