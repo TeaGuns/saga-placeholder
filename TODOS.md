@@ -27,6 +27,11 @@ Domain must be confirmed before DNS is pointed. Once confirmed, uncomment and fi
 
 ## Completed
 
+### Rebrand metadata + contact to General Knowledge (v0.0.0.1)
+Updated page title, description, Open Graph, and Twitter card to "General Knowledge".
+Updated contact email to `m@genknow.com`. Removed Saga wordmark logo from lockup.
+**Completed:** v0.0.0.1 (2026-05-11)
+
 ### LinkedIn link → Join Us mailto (v2)
 Replaced the placeholder LinkedIn link with `Join Us → mailto:team@withsaga.com`.
 **Completed:** TeaGuns/tel-aviv-v2
